@@ -1,0 +1,271 @@
+---
+title: "Data Explorations"
+author: "Chai Zhang"
+date: "2024-04-17"
+output: html_document
+---
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tm)
+library(wordcloud)
+
+complaints_data <- read.csv("civilian complaints against NYPD.csv")
+
+complaints_data
+```
+
+```{r}
+unique_allegations <- unique(complaints_data$allegation)
+
+# print each unique allegation
+for (allegation in unique_allegations) {
+  print(allegation)
+}
+```
+
+```{r}
+unique_ethnicity <- unique(complaints_data$complainant_ethnicity)
+
+for (complainant_ethnicity in unique_ethnicity) {
+  print(complainant_ethnicity)
+}
+```
+
+
+```{r}
+unique_age <- unique(complaints_data$complainant_age_incident)
+
+for (complainant_age_incident in unique_age) {
+  print(complainant_age_incident)
+}
+```
+
+```{r}
+# filter out any NA values
+cleaned_age_data <- na.omit(complaints_data$complainant_age_incident)
+
+# sort the age data in ascending order for min ages and descending order for max ages
+sorted_min_age <- sort(unique(cleaned_age_data))
+sorted_max_age <- sort(unique(cleaned_age_data), decreasing = TRUE)
+
+# print top 5 min ages
+cat("Top 5 Minimum Ages:\n")
+cat(head(sorted_min_age, 5), "\n")
+
+# print top 5 max ages
+cat("\nTop 5 Maximum Ages:\n")
+cat(head(sorted_max_age, 5), "\n")
+```
+
+
+```{r}
+unique_gender <- unique(complaints_data$complainant_gender)
+
+# print each unique allegation
+for (complainant_gender in unique_gender) {
+  print(complainant_gender)
+}
+```
+
+
+```{r}
+# remove rows based on conditions
+cleaned_data <- subset(complaints_data, 
+                       !complainant_ethnicity == "" &
+                       !complainant_age_incident %in% c(-4301, -1, 0, NA) &
+                       !complainant_gender == "")
+
+# print the num of rows removed
+rows_removed <- nrow(complaints_data) - nrow(cleaned_data)
+cat("Number of rows removed:", rows_removed, "\n")
+
+# TEST to see if rows are properly removed
+empty_ethnicity_rows <- cleaned_data[cleaned_data$complainant_ethnicity == "", ]
+print(empty_ethnicity_rows)
+```
+
+
+```{r}
+# see cleaned data
+cleaned_data
+```
+
+
+```{r}
+#** Graphing complaint count stacked bar chart **#
+
+complaints_data$year_received <- factor(complaints_data$year_received)
+
+# calculate the count of complaints for each FADO type and year
+complaints_count <- complaints_data %>%
+  group_by(year_received, fado_type) %>%
+  summarise(complaint_count = n())
+
+# create the stacked bar chart
+ggplot(complaints_count, aes(x = year_received, y = complaint_count, fill = fado_type)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Year", y = "Complaint Count", fill = "FADO Type") +
+  ggtitle("Complaint Count by FADO Type Over the Years") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+#** Graphing ethnicity pie chart **#
+
+ethnicity_colors <- c("red", "blue", "green", "yellow", "orange", "purple", "cyan", "magenta")
+
+# count the frequency of each complainant_ethnicity
+ethnicity_counts <- table(cleaned_data$complainant_ethnicity)
+
+# calculate percentages
+ethnicity_percentages <- round(100 * ethnicity_counts / sum(ethnicity_counts), 1)
+
+# create a pie chart with specific colors for each slice
+pie(ethnicity_counts, 
+    labels = paste(names(ethnicity_counts), ": ", ethnicity_percentages, "%", sep = ""), 
+    main = "Distribution of Complainant Ethnicity",
+    col = ethnicity_colors,  # use specific colors
+    cex = 0.8)  # adjust the value of cex to change the text label size
+
+legend("top",
+       legend = names(ethnicity_counts), 
+       fill = ethnicity_colors,
+       bty = "n", 
+       xpd = TRUE,  # allow legend to be placed outside the plot area
+       ncol = 3,  # number of columns in the legend
+       inset = c(0, -0.1))  # adjust the inset to move the legend upwards
+```
+
+
+```{r}
+#** Graphing age pie chart **#
+
+age_colors <- c("red", "blue", "green", "yellow", "orange", "purple")
+
+# define age groups
+age_groups <- c("Under 15", "15-19", "20-24", "25-39", "40-59", "59 and Above")
+
+# define the boundaries for each age group
+age_bins <- c(0, 15, 19, 24, 39, 59, Inf)
+
+# cut complainant_age_incident into age groups
+cleaned_data$age_group <- cut(cleaned_data$complainant_age_incident, age_bins, labels = age_groups, right = FALSE)
+
+age_group_percentages <- round(100 * age_group_counts / sum(age_group_counts), 1)
+
+pie(age_group_counts, 
+    labels = paste(names(age_group_counts), ": ", age_group_percentages, "%", sep = ""), 
+    col = age_colors,
+    main = "Distribution of Complainant Age Groups")
+
+legend("top", 
+       legend = names(age_group_counts), 
+       fill = rainbow(length(age_group_counts)), 
+       bty = "n",
+       xpd = TRUE,
+       ncol = 3,
+       inset = c(0, -0.1))
+```
+
+
+```{r}
+#** Graphing gender pie chart **#
+
+# replace non-"Female" and non-"Male" genders with "Other"
+cleaned_data$complainant_gender <- ifelse(cleaned_data$complainant_gender %in% c("Female", "Male"), cleaned_data$complainant_gender, "Other")
+
+gender_colors <- c("blue", "red", "green")
+
+gender_counts <- table(cleaned_data$complainant_gender)
+
+gender_percentages <- round(100 * gender_counts / sum(gender_counts), 1)
+
+pie(gender_counts, 
+    labels = paste(names(gender_counts), ": ", gender_percentages, "%", sep = ""), 
+    col = gender_colors,
+    main = "Distribution of Complainant Gender",
+    cex = 0.8)
+
+legend("top", 
+       legend = names(gender_counts), 
+       fill = gender_colors, 
+       bty = "n", 
+       xpd = TRUE, 
+       ncol = 2, 
+       inset = c(0, -0.1))
+```
+
+
+```{r}
+nyc_population <- read.csv("NYC Pop by Age and Sex.csv")
+
+nyc_population
+```
+
+
+```{r}
+library(plotly)
+
+# Define age groups based on the age ranges
+age_groups <- c("Under 15", "15-19", "20-24", "25-39", "40-59", "Above 59")
+
+# Calculate the total population for each age group
+total_population <- c(
+  sum(nyc_population$`under.5`, nyc_population$`age.5.to.9`),
+  nyc_population$`age.10.to.14`,
+  nyc_population$`age.15.to.19`,
+  sum(nyc_population$`age.20.to.24`),
+  sum(nyc_population$`age.25.to.29`, nyc_population$`age.30.to.34`, nyc_population$`age.35.to.39`),
+  sum(nyc_population$`age.40.to.44`, nyc_population$`age.45.to.49`, nyc_population$`age.50.to.54`, 
+      nyc_population$`age.55.to.59`),
+  sum(nyc_population$`age.60.to.64`, nyc_population$`age.65.to.69`, nyc_population$`age.70.to.74`,
+      nyc_population$`age.75.to.79`, nyc_population$`age.80.to.84`, nyc_population$`age.85.and.over`)
+)
+
+# Create pie chart using Plotly
+pie_chart <- plot_ly(labels = age_groups, values = total_population, type = 'pie')
+
+pie_chart
+```
+
+
+```{r}
+total_male <- sum(nyc_population$NYC.Male.Total.Pop)
+total_female <- sum(nyc_population$NYC.Female.Total.Pop)
+
+# create a data frame for the pie chart
+sex_distribution <- data.frame(
+  Sex = c("Male", "Female"),
+  Population = c(total_male, total_female)
+)
+
+# create pie chart using Plotly
+pie_chart <- plot_ly(
+  data = sex_distribution,
+  labels = ~Sex,
+  values = ~Population,
+  type = 'pie'
+)
+
+pie_chart
+```
+
+
+```{r}
+nyc_ethnicity <- c("White", "Hispanic", "Black", "Asian", "American Indian", "Mixed", "Other Race")
+population_percentages <- c(30.9, 28.3, 20.2, 15.6, 0.2, 3.4, 1.4)
+
+nyc_ethnicity_data <- data.frame(nyc_ethnicity, population_percentages)
+
+pie_chart <- plot_ly(nyc_ethnicity_data, labels = ~nyc_ethnicity, values = ~population_percentages, type = 'pie')
+
+pie_chart
+```
+
+
+
