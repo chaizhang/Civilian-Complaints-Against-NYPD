@@ -267,5 +267,85 @@ pie_chart <- plot_ly(nyc_ethnicity_data, labels = ~nyc_ethnicity, values = ~popu
 pie_chart
 ```
 
+```{r}
+unique_mos_ethnicity <- unique(complaints_data$mos_ethnicity)
+
+for (mos_ethnicity in unique_mos_ethnicity) {
+  print(mos_ethnicity)
+}
+```
+
+
+```{r}
+unique_board_disposition <- unique(complaints_data$board_disposition)
+
+# for (board_disposition in unique_board_disposition) {
+#   print(board_disposition)
+# }
+
+unique_rank_incident <- unique(complaints_data$rank_incident)
+
+for (rank_incident in unique_rank_incident) {
+  print(rank_incident)
+}
+
+# RANK
+# police officer
+# detective
+# sergeant
+# lieutenant
+# captain
+# deputy inspector
+# inspector
+# chiefs and other ranks
+```
+
+
+```{r}
+# replace values in board_disposition column
+board_dispos_cleaned_data <- complaints_data %>%
+  mutate(board_disposition = case_when(
+    grepl("Substantiated", board_disposition) ~ "Substantiated",
+    TRUE ~ board_disposition
+  ))
+
+# TEST
+unique_board_disposition <- unique(board_dispos_cleaned_data$board_disposition)
+
+for (board_disposition in unique_board_disposition) {
+  print(board_disposition)
+}
+```
+
+
+```{r}
+# Create a subset of data with relevant columns
+subset_data <- complaints_data %>%
+  select(rank_incident, board_disposition)
+
+# Define the custom order for rank_incident levels
+custom_order <- c(
+  "Police Officer", "Sergeant", "Detective", "Lieutenant",
+  "Captain", "Deputy Inspector", "Inspector", "Chiefs and other ranks"
+)
+
+# Reorder rank_incident column factor levels
+subset_data$rank_incident <- factor(subset_data$rank_incident, levels = custom_order)
+
+# Count the occurrences of each combination of rank_incident and board_disposition
+count_data <- subset_data %>%
+  count(rank_incident, board_disposition)
+
+# Plotting the stacked bar chart
+ggplot(count_data, aes(x = rank_incident, y = n, fill = board_disposition)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Rank Incident", y = "Complaint Outcome Count") +
+  scale_fill_manual(values = c("Substantiated" = "green", "Unsubstantiated" = "red", "Exonerated" = "blue")) +
+  theme_minimal()
+```
+
+
+
+
 
 

@@ -5,9 +5,9 @@ account: chai-shiny-application
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 11802528
-bundleId: 8515532
+bundleId: 8521831
 url: https://chai-shiny-application.shinyapps.io/Civilian_Complaints_Against_NYPD/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: Data Cleaning.Rmd
+ignoredFiles: data exploration.Rmd
